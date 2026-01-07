@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-ingress
+  namespace: prod-nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: / # Rewrites URL path before sending to service
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"  # Forces HTTP → HTTPS redirect
+spec:
+  ingressClassName: nginx   # Tells Kubernetes which ingress controller to use
+  rules:
+  - host: www.company.com   # Domain name users will access
+    http:
+      paths:
+      - path: /
+        pathType: Prefix   # Prefix means all paths under /
+        backend:
+          service:
+            name: nginx-service  # Service name where traffic is sent
+            port:
+              number: 80

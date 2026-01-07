@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: prod-nginx
+spec:
+  replicas: 3   # High availability
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1      # Only 1 pod can go down during update
+      maxSurge: 1             # Only 1 extra pod can be created
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      securityContext:       # Security: do not run container as root
+        runAsNonRoot: true   
+        runAsUser: 101
+      containers:
+      - name: nginx
+        image: nginx:1.25-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+
+        resources:             # CPU and memory limits
+          requests:
+            cpu: "100m"        # Guaranteed CPU
+            memory: "128Mi"    # Guaranteed memory
+          limits:
+            cpu: "500m"        # Max CPU
+            memory: "256Mi"    # Max memory
+
+        readinessProbe:       # Checks if pod is ready to receive traffic
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+        livenessProbe:       # Checks if pod is alive; restarts if failed
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+
+        volumeMounts:         # Mount nginx.conf from ConfigMap
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-config
